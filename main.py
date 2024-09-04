@@ -1,5 +1,5 @@
 
 
 def main():
-    print("Hei på deg")
+    print("Hei på deg hhh")
 
