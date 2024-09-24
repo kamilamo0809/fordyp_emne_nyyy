@@ -15,6 +15,8 @@ def read_consumption(filename):
 
     return consumption
 
+
+
 def merge_lists(file1, file2, file3):
     data1 = pd.read_excel(file1)
     data2 = pd.read_excel(file2)
