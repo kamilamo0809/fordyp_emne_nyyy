@@ -1,6 +1,7 @@
 import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 from gurobipy import *
+from Spotprice import *
 
 ''' ------------------- Model creation ------------------- '''
 
@@ -18,10 +19,11 @@ model.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
 
 # Scenarios
 scenarios = list(range(1,4)) # scenario 1, 2 and 3
+print(scenarios)
 model.scenario = pyo.Set(initialize = scenarios)
 
 # Time
-time = list(range(1, 8760)) # each hour in a year
+time = list(range(1, 8761)) # each hour in a year
 model.time = pyo.Set(initialize = time)
 
 ''' --------------------- Parameters --------------------- '''
@@ -36,13 +38,29 @@ model.plant_cap = pyo.Param(initialize = 100) #MW
 model.var_cost = pyo.Param(initialize = 200) #NOK/MWh
 
 # Spot prices for the three scenarios
-model.spot = pyo.Param(model.scenario, model.time, initialize = read_spot()) # TODO: Benevning og sett inn riktig funksjonsnavn
+# Assuming your merged DataFrame looks like this after calling `merge_lists()`
+df_spot_prices = merge_lists("spotpriser_21.xlsx", "spotpriser_22.xlsx", "spotpriser_23.xlsx")
+spot_prices_dict = {
+    (time+1, i + 1): df_spot_prices.iloc[time, i]
+    for time in df_spot_prices.index
+    for i in range(df_spot_prices.shape[1])
+}
+# Now pass this dictionary to the initialize function of Pyomo's Param
+model.spot = pyo.Param(model.time, model.scenario, initialize=spot_prices_dict)
 
 # probabilities
-model.probabilities = pyo.Param(model.scenario, initialize = [0.25, 0.6, 0.15]) # TODO: sett inn riktige sansynligheter
+model.probabilities = pyo.Param(model.scenario, initialize = {1:0.25, 2:0.6, 3:0.15}) # TODO: sett inn riktige sansynligheter
 
 # Demand
-model.demand = pyo.Param(model.time, initialize = read_load()) # TODO: sett inn riktig funksjon
+
+df_demand = read_consumption("rye_generation_and_load.csv")
+demand_dict = {
+    (time+1, i): df_demand.iloc[time]
+    for time in df_spot_prices.index
+    for i in scenarios
+}
+
+model.demand = pyo.Param(model.time, model.scenario, initialize = demand_dict) # TODO: sett inn riktig funksjon
 
 # Line capacity
 model.line_cap = pyo.Param(initialize = 10) #MW
@@ -87,11 +105,11 @@ model.max_production = pyo.Constraint(model.scenario, model.time, rule = max_pro
 
 # Power balance
 def power_balance1(model, w, t):
-    return (-model.line_cap <= model.dispatch[w, t] - model.dispatch[t])
-model.power_balance1 = pyo.Constraint(model.scenario, model.tinme, rule = power_balance1)
+    return (-model.line_cap <= model.dispatch[w, t] - model.demand[w, t])
+model.power_balance1 = pyo.Constraint(model.scenario, model.time, rule = power_balance1)
 
 def power_balance2(model, w, t):
-    return (model.line_cap >= model.dispatch[w, t] - model.dispatch[t])
+    return (model.line_cap >= model.dispatch[w, t] - model.demand[w, t])
 model.power_balance2 = pyo.Constraint(model.scenario, model.tinme, rule = power_balance2)
 
 ''' --------------------- Objective function --------------------- '''

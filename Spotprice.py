@@ -9,12 +9,17 @@ def read_spotprice(filename):
 
 def read_consumption(filename):
     data=pd.read_csv(filename)
-    consumption=data['Consumption']
-    consumption_add = consumption[7800:8280] * 1.2
-    consumption = np.append(consumption, consumption_add)
 
-    return consumption
+    # Drop columns where all elements are NaN to clean up the data
+    data = data.dropna(axis = 1, how = 'all')
 
+    # Include only the consumption in the dataframe
+    consumption_df = data[['Consumption']]
+    consumption_add = consumption_df[7800:8280] * 1.2
+    consumption_add.index = range(8280, 8760)
+    consumption_df_updated = pd.concat([consumption_df, consumption_add])
+
+    return consumption_df_updated
 
 
 def merge_lists(file1, file2, file3):
@@ -25,3 +30,5 @@ def merge_lists(file1, file2, file3):
     df.columns = [1, 2, 3]
 
     return df
+#print(read_consumption("rye_generation_and_load.csv"))
+print(merge_lists("spotpriser_21.xlsx", "spotpriser_22.xlsx", "spotpriser_23.xlsx"))
