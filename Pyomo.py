@@ -5,6 +5,12 @@ from gurobipy import *
 from Spotprice import *
 import seaborn as sns
 
+'''
+• This script solves the stochastic problem with all scenarios and probabilities
+• Simply run the script to obtain all values
+'''
+
+
 ''' ------------------- Model creation ------------------- '''
 
 # Make model
@@ -30,10 +36,11 @@ model.time = pyo.Set(initialize = time)
 ''' --------------------- Parameters --------------------- '''
 
 # Investment cost of power plant
-model.invest = pyo.Param(initialize = 85000000) #NOK
+model.invest = pyo.Param(initialize = 44000000) #NOK
 
-# Max power plant capacity
-model.plant_cap = pyo.Param(initialize = 100) #MW
+# Power plant capacity
+model.max_plant_cap = pyo.Param(initialize = 15) #MW
+model.min_plant_cap = pyo.Param(initialize = 3.5) #MW
 
 # variable cost
 model.var_cost = pyo.Param(initialize = 200) #NOK/MWh
@@ -63,7 +70,7 @@ demand_dict = {
 model.demand = pyo.Param(model.time, model.scenario, initialize=demand_dict)
 
 # Line capacity
-model.line_cap = pyo.Param(initialize = 50) #MW
+model.line_cap = pyo.Param(initialize = 5) #MW
 
 # Lifetime
 model.lifetime = pyo.Param(initialize = 60) # years
@@ -81,15 +88,15 @@ model.dispatch = pyo.Var(model.time, model.scenario, within = pyo.NonNegativeRea
 
 ''' --------------------- Constraints --------------------- '''
 
-# Plant min capacity:
-def min_plant_cap(model):
-    return model.size >= 0
-model.min_plant_cap = pyo.Constraint(rule = min_plant_cap)
-
 # Plant max capacity:
-def max_plant_cap(model):
-    return model.size <= 100
-model.max_plant_cap = pyo.Constraint(rule = max_plant_cap)
+def max_plant_cap_rule(model):
+    return model.size <= model.max_plant_cap
+model.max_plant_cap_rule = pyo.Constraint(rule = max_plant_cap_rule)
+
+# Plant min capacity:
+def min_plant_cap_rule(model):
+    return model.size >= model.min_plant_cap
+model.min_plant_cap_rule = pyo.Constraint(rule = min_plant_cap_rule)
 
 # Min production
 def min_production(model, t, w):
@@ -130,8 +137,8 @@ results = opt.solve(model, load_solutions = True)
 #model.display()
 #model.dual.display()
 
-print(model.size.value)
-print(model.obj())
+print("Optimal power plant size:", model.size.value)
+print("Objective value (income - cost):", model.obj())
 
 sns.set_palette("Set2")
 set2_palette = sns.color_palette("Set2")
@@ -139,6 +146,8 @@ set2_palette = sns.color_palette("Set2")
 dispatch_scenario1 = []
 dispatch_scenario2 = []
 dispatch_scenario3 = []
+load = [model.demand[t, 1] for t in model.time]
+
 for i in range(1, 8761):
     dispatch_scenario1.append(model.dispatch[i, 1].value)
     dispatch_scenario2.append(model.dispatch[i, 2].value)
@@ -147,11 +156,13 @@ for i in range(1, 8761):
 dispatch_scenario1.sort(reverse = True)
 dispatch_scenario2.sort(reverse = True)
 dispatch_scenario3.sort(reverse = True)
+load.sort(reverse = True)
 
 # Plot all three scenarios in one graph
 sns.lineplot(x=list(range(8760)), y=dispatch_scenario1, label='Scenario 1', color = "hotpink")
 sns.lineplot(x=list(range(8760)), y=dispatch_scenario2, label='Scenario 2', color = "skyblue")
 sns.lineplot(x=list(range(8760)), y=dispatch_scenario3, label='Scenario 3', color = "orange")
+sns.lineplot(x=list(range(8760)), y=load, label = "Load", color = "teal")
 
 # Add labels and title
 plt.xlabel('Time (hours)')

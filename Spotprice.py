@@ -41,10 +41,9 @@ def merge_lists(file1, file2, file3):
 def consumption_3_scenarios(filename):
     df_demand = read_consumption(filename)
     # Step 1: Create a new DataFrame by duplicating the 'Consumption' column three times
+    df_demand = df_demand / 10 # Vi har et område som er 100 ganger så stort som microgridet
     df_demand = pd.concat([df_demand['Consumption']] * 3, axis = 1)
-
     # Step 2: Rename the columns to 1, 2, and 3
     df_demand.columns = [1, 2, 3]
 
     return df_demand
-
