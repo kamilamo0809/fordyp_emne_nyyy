@@ -5,7 +5,11 @@ def read_spotprice(filename):
     data = pd.read_excel(filename)
     spotprice = data['NO3']
 
+    # Multiply all values by 1000
+    spotprice = spotprice * 1000
+
     return spotprice
+
 
 def read_consumption(filename):
     data=pd.read_csv(filename)
@@ -26,8 +30,11 @@ def merge_lists(file1, file2, file3):
     data1 = pd.read_excel(file1)
     data2 = pd.read_excel(file2)
     data3 = pd.read_excel(file3)
+
     df = pd.concat([data1['NO3'], data2['NO3'], data3['NO3']], axis=1)
     df.columns = [1, 2, 3]
+
+    df = df * 1000
 
     return df
 
@@ -43,22 +50,21 @@ def consumption_3_scenarios(filename):
 
 
 #print(read_consumption("rye_generation_and_load.csv"))
-df_spot_prices = merge_lists("spotpriser_21.xlsx", "spotpriser_22.xlsx", "spotpriser_23.xlsx")
+df_spot_prices = read_spotprice("spotpriser_22.xlsx")
 
-spot_prices_dict = {
-    (time+1, i + 1): df_spot_prices.iloc[time, i]
-    for time in df_spot_prices.index
-    for i in range(df_spot_prices.shape[1])
-}
+
+print(df_spot_prices.iloc[5])
+#print(df_spot_prices)
 
 #print(spot_prices_dict)
 
 
-df_demand = consumption_3_scenarios("rye_generation_and_load.csv")
+#df_demand = consumption_3_scenarios("rye_generation_and_load.csv")
 
-demand_dict = {
-    (time + 1, i + 1): df_demand.iloc[time, i]
-    for time in df_demand.index
-    for i in range(df_demand.shape[1])}
+# Assuming df_demand is your DataFrame
+#max_value = df_demand[1].max()
+
+# Print the maximum value
+#print("Maximum value in column 1:", max_value)
 
 #print(demand_dict)
