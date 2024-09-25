@@ -32,7 +32,7 @@ model.time = pyo.Set(initialize = time)
 model.invest = pyo.Param(initialize = 85000000) #NOK
 
 # Max power plant capacity
-model.plant_cap = pyo.Param(initialize = 100) #MW
+model.plant_cap = pyo.Param(initialize = 100) #M
 
 # variable cost
 model.var_cost = pyo.Param(initialize = 200) #NOK/MWh
