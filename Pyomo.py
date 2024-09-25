@@ -63,13 +63,13 @@ demand_dict = {
 model.demand = pyo.Param(model.time, model.scenario, initialize=demand_dict)
 
 # Line capacity
-model.line_cap = pyo.Param(initialize = 10) #MW
+model.line_cap = pyo.Param(initialize = 20) #MW
 
 # Lifetime
 model.lifetime = pyo.Param(initialize = 60) # years
 
 # rate of interest
-model.rate = pyo.Param(initialize = 0.05)
+model.rate = pyo.Param(initialize = 0.02)
 
 ''' --------------------- Variables --------------------- '''
 
@@ -131,6 +131,8 @@ results = opt.solve(model, load_solutions = True)
 #model.dual.display()
 
 print(model.size.value)
+print(model.obj())
+
 sns.color_palette("Set2")
 
 dispatch_scenario1 = []
@@ -153,11 +155,10 @@ sns.lineplot(x=list(range(8760)), y=dispatch_scenario3, label='Scenario 3')
 # Add labels and title
 plt.xlabel('Time (hours)')
 plt.ylabel('Dispatch (MW)')
-plt.title('Dispatch Over Time for Different Scenarios')
+plt.title('Dispatch Over Time for Different Scenarios (sorted)')
 
 # Show the legend
 plt.legend()
-
 plt.show()
 
 
