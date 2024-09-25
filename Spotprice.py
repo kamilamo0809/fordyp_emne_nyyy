@@ -30,5 +30,35 @@ def merge_lists(file1, file2, file3):
     df.columns = [1, 2, 3]
 
     return df
+
+def consumption_3_scenarios(filename):
+    df_demand = read_consumption(filename)
+    # Step 1: Create a new DataFrame by duplicating the 'Consumption' column three times
+    df_demand = pd.concat([df_demand['Consumption']] * 3, axis = 1)
+
+    # Step 2: Rename the columns to 1, 2, and 3
+    df_demand.columns = [1, 2, 3]
+
+    return df_demand
+
+
 #print(read_consumption("rye_generation_and_load.csv"))
-print(merge_lists("spotpriser_21.xlsx", "spotpriser_22.xlsx", "spotpriser_23.xlsx"))
+df_spot_prices = merge_lists("spotpriser_21.xlsx", "spotpriser_22.xlsx", "spotpriser_23.xlsx")
+
+spot_prices_dict = {
+    (time+1, i + 1): df_spot_prices.iloc[time, i]
+    for time in df_spot_prices.index
+    for i in range(df_spot_prices.shape[1])
+}
+
+#print(spot_prices_dict)
+
+
+df_demand = consumption_3_scenarios("rye_generation_and_load.csv")
+
+demand_dict = {
+    (time + 1, i + 1): df_demand.iloc[time, i]
+    for time in df_demand.index
+    for i in range(df_demand.shape[1])}
+
+#print(demand_dict)

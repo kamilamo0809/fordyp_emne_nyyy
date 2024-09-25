@@ -1,7 +1,9 @@
+import matplotlib.pyplot as plt
 import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 from gurobipy import *
 from Spotprice import *
+import seaborn as sns
 
 ''' ------------------- Model creation ------------------- '''
 
@@ -19,7 +21,6 @@ model.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
 
 # Scenarios
 scenarios = list(range(1,4)) # scenario 1, 2 and 3
-print(scenarios)
 model.scenario = pyo.Set(initialize = scenarios)
 
 # Time
@@ -32,7 +33,7 @@ model.time = pyo.Set(initialize = time)
 model.invest = pyo.Param(initialize = 85000000) #NOK
 
 # Max power plant capacity
-model.plant_cap = pyo.Param(initialize = 100) #M
+model.plant_cap = pyo.Param(initialize = 100) #MW
 
 # variable cost
 model.var_cost = pyo.Param(initialize = 200) #NOK/MWh
@@ -52,15 +53,14 @@ model.spot = pyo.Param(model.time, model.scenario, initialize=spot_prices_dict)
 model.probabilities = pyo.Param(model.scenario, initialize = {1:0.25, 2:0.6, 3:0.15}) # TODO: sett inn riktige sansynligheter
 
 # Demand
+df_demand = consumption_3_scenarios("rye_generation_and_load.csv")
 
-df_demand = read_consumption("rye_generation_and_load.csv")
 demand_dict = {
-    (time+1, i): df_demand.iloc[time]
-    for time in df_spot_prices.index
-    for i in scenarios
-}
+    (time + 1, i + 1): df_demand.iloc[time, i]
+    for time in df_demand.index
+    for i in range(df_demand.shape[1])}
 
-model.demand = pyo.Param(model.time, model.scenario, initialize = demand_dict) # TODO: sett inn riktig funksjon
+model.demand = pyo.Param(model.time, model.scenario, initialize=demand_dict)
 
 # Line capacity
 model.line_cap = pyo.Param(initialize = 10) #MW
@@ -77,7 +77,7 @@ model.rate = pyo.Param(initialize = 0.05)
 model.size = pyo.Var(within = pyo.NonNegativeReals)
 
 # Dispatch
-model.dispatch = pyo.Var(model.scenario, model.time, within = pyo.NonNegativeReals)
+model.dispatch = pyo.Var(model.time, model.scenario, within = pyo.NonNegativeReals)
 
 ''' --------------------- Constraints --------------------- '''
 
@@ -92,38 +92,72 @@ def max_plant_cap(model):
 model.max_plant_cap = pyo.Constraint(rule = max_plant_cap)
 
 # Min production
-def min_production(model, w, t):
-    return (model.dispatch[w, t] >= 0)
-model.min_production = pyo.Constraint(model.scenario, model.time, rule = min_production)
+def min_production(model, t, w):
+    return (model.dispatch[t, w] >= 0)
+model.min_production = pyo.Constraint(model.time, model.scenario, rule = min_production)
 
 # Max production
-def max_production(model, w, t):
-    return (model.dispatch[w, t] <= model.size)
-model.max_production = pyo.Constraint(model.scenario, model.time, rule = max_production)
+def max_production(model, t, w):
+    return (model.dispatch[t, w] <= model.size)
+model.max_production = pyo.Constraint(model.time, model.scenario, rule = max_production)
 
 # Annuity
 
 # Power balance
-def power_balance1(model, w, t):
-    return (-model.line_cap <= model.dispatch[w, t] - model.demand[w, t])
-model.power_balance1 = pyo.Constraint(model.scenario, model.time, rule = power_balance1)
+def power_balance1(model, t, w):
+    return model.dispatch[t, w] - model.demand[t, w] >= -model.line_cap
+model.power_balance1 = pyo.Constraint(model.time, model.scenario, rule=power_balance1)
 
-def power_balance2(model, w, t):
-    return (model.line_cap >= model.dispatch[w, t] - model.demand[w, t])
-model.power_balance2 = pyo.Constraint(model.scenario, model.tinme, rule = power_balance2)
+def power_balance2(model, t, w):
+    return model.dispatch[t, w] - model.demand[t, w] <= model.line_cap
+model.power_balance2 = pyo.Constraint(model.time, model.scenario, rule=power_balance2)
 
 ''' --------------------- Objective function --------------------- '''
 
 # Maximize income
 def obj(model):
- outcome = model.invest * model.size * (model.rate/(1-(1+model.rate)**(-model.lifetime)))
- income = sum(model.probability[w] * sum((model.spot[w, t] - model.var_cost) * model.dispatch[w, t] for t in model.time) for w in model.scenario)
- return (income - outcome)
+    outcome = model.invest * model.size * (model.rate / (1 - (1 + model.rate) ** (-model.lifetime)))
+    income = sum(
+        model.probabilities[w] * sum((model.spot[t, w] - model.var_cost) * model.dispatch[t, w] for t in model.time)
+        for w in model.scenario
+    )
+    return income - outcome
+model.obj = pyo.Objective(rule=obj, sense=pyo.maximize)
 
 ''' --------------------- Solve problem --------------------- '''
 
 results = opt.solve(model, load_solutions = True)
-model.display()
-model.dual.display()
+#model.display()
+#model.dual.display()
+
+print(model.size.value)
+sns.color_palette("Set2")
+
+dispatch_scenario1 = []
+dispatch_scenario2 = []
+dispatch_scenario3 = []
+for i in range(1, 8761):
+    dispatch_scenario1.append(model.dispatch[i, 1].value)
+    dispatch_scenario2.append(model.dispatch[i, 2].value)
+    dispatch_scenario3.append(model.dispatch[i, 3].value)
+
+dispatch_scenario1.sort(reverse = True)
+dispatch_scenario2.sort(reverse = True)
+dispatch_scenario3.sort(reverse = True)
+
+# Plot all three scenarios in one graph
+sns.lineplot(x=list(range(8760)), y=dispatch_scenario1, label='Scenario 1')
+sns.lineplot(x=list(range(8760)), y=dispatch_scenario2, label='Scenario 2')
+sns.lineplot(x=list(range(8760)), y=dispatch_scenario3, label='Scenario 3')
+
+# Add labels and title
+plt.xlabel('Time (hours)')
+plt.ylabel('Dispatch (MW)')
+plt.title('Dispatch Over Time for Different Scenarios')
+
+# Show the legend
+plt.legend()
+
+plt.show()
 
 
