@@ -50,7 +50,7 @@ spot_prices_dict = {
 model.spot = pyo.Param(model.time, model.scenario, initialize=spot_prices_dict)
 
 # probabilities
-model.probabilities = pyo.Param(model.scenario, initialize = {1:0.25, 2:0.6, 3:0.15}) # TODO: sett inn riktige sansynligheter
+model.probabilities = pyo.Param(model.scenario, initialize = {1:0.2, 2:0.7, 3:0.1}) # TODO: sett inn riktige sansynligheter
 
 # Demand
 df_demand = consumption_3_scenarios("rye_generation_and_load.csv")
@@ -63,7 +63,7 @@ demand_dict = {
 model.demand = pyo.Param(model.time, model.scenario, initialize=demand_dict)
 
 # Line capacity
-model.line_cap = pyo.Param(initialize = 20) #MW
+model.line_cap = pyo.Param(initialize = 50) #MW
 
 # Lifetime
 model.lifetime = pyo.Param(initialize = 60) # years
@@ -133,7 +133,8 @@ results = opt.solve(model, load_solutions = True)
 print(model.size.value)
 print(model.obj())
 
-sns.color_palette("Set2")
+sns.set_palette("Set2")
+set2_palette = sns.color_palette("Set2")
 
 dispatch_scenario1 = []
 dispatch_scenario2 = []
@@ -148,9 +149,9 @@ dispatch_scenario2.sort(reverse = True)
 dispatch_scenario3.sort(reverse = True)
 
 # Plot all three scenarios in one graph
-sns.lineplot(x=list(range(8760)), y=dispatch_scenario1, label='Scenario 1')
-sns.lineplot(x=list(range(8760)), y=dispatch_scenario2, label='Scenario 2')
-sns.lineplot(x=list(range(8760)), y=dispatch_scenario3, label='Scenario 3')
+sns.lineplot(x=list(range(8760)), y=dispatch_scenario1, label='Scenario 1', color = "hotpink")
+sns.lineplot(x=list(range(8760)), y=dispatch_scenario2, label='Scenario 2', color = "skyblue")
+sns.lineplot(x=list(range(8760)), y=dispatch_scenario3, label='Scenario 3', color = "orange")
 
 # Add labels and title
 plt.xlabel('Time (hours)')

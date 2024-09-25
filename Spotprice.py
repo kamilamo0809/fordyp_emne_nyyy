@@ -48,23 +48,3 @@ def consumption_3_scenarios(filename):
 
     return df_demand
 
-
-#print(read_consumption("rye_generation_and_load.csv"))
-df_spot_prices = read_spotprice("spotpriser_22.xlsx")
-
-
-print(df_spot_prices.iloc[5])
-#print(df_spot_prices)
-
-#print(spot_prices_dict)
-
-
-#df_demand = consumption_3_scenarios("rye_generation_and_load.csv")
-
-# Assuming df_demand is your DataFrame
-#max_value = df_demand[1].max()
-
-# Print the maximum value
-#print("Maximum value in column 1:", max_value)
-
-#print(demand_dict)
